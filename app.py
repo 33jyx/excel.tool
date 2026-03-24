@@ -150,6 +150,10 @@ if generate_btn:
         st.error("❌ 请先上传需要插入的图片")
     else:
         try:
+            # 兼容不同openpyxl版本的绘图对象初始化
+            if not hasattr(ws, 'drawing') or ws.drawing is None:
+                ws._drawing = None
+            
             # 遍历图片，批量插入Excel
             for i, img_file in enumerate(uploaded_images):
                 # 计算目标单元格
@@ -179,7 +183,14 @@ if generate_btn:
                 pil_img = PILImage.open(img_file)
                 img_w, img_h = pil_img.size
                 scale = min(available_width / img_w, available_height / img_h)
-                resized_img = pil_img.resize((int(img_w * scale), int(img_h * scale)), PILImage.Resampling.LANCZOS)
+                
+                # 兼容不同Pillow版本的采样器，避免版本报错
+                try:
+                    resample_filter = PILImage.Resampling.LANCZOS
+                except AttributeError:
+                    resample_filter = PILImage.LANCZOS
+                
+                resized_img = pil_img.resize((int(img_w * scale), int(img_h * scale)), resample_filter)
                 
                 # 转换为Openpyxl支持的图片格式
                 img_buf = io.BytesIO()
